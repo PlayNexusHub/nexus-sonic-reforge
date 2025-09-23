@@ -19,13 +19,27 @@ import {
 interface AudioToolbarProps {
   onFileUpload: (file: File) => void;
   onExport: () => void;
+  isPlaying?: boolean;
+  onPlay?: () => void;
+  onPause?: () => void;
+  onStop?: () => void;
+  onSave?: () => void;
+  masterVolume?: number;
+  onMasterVolumeChange?: (volume: number) => void;
   className?: string;
 }
 
-export const AudioToolbar: React.FC<AudioToolbarProps> = ({
-  onFileUpload,
-  onExport,
-  className = ''
+export const AudioToolbar: React.FC<AudioToolbarProps> = ({ 
+  onFileUpload, 
+  onExport, 
+  isPlaying = false,
+  onPlay,
+  onPause,
+  onStop,
+  onSave,
+  masterVolume = 80,
+  onMasterVolumeChange,
+  className = '' 
 }) => {
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];

@@ -3,15 +3,23 @@ import { WaveformDisplay } from '@/components/audio/WaveformDisplay';
 import { AudioToolbar } from '@/components/audio/AudioToolbar';
 import { AudioTimeline } from '@/components/audio/AudioTimeline';
 import { EffectsPanel } from '@/components/audio/EffectsPanel';
+import { SpectralAnalyzer } from '@/components/audio/SpectralAnalyzer';
+import { AudioMeters } from '@/components/audio/AudioMeters';
+import { ProjectManager } from '@/components/audio/ProjectManager';
+import { ZoomControls } from '@/components/audio/ZoomControls';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Zap, Music, Headphones, Upload } from 'lucide-react';
+import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import heroImage from '@/assets/hero-audio-studio.jpg';
 
 const Index = () => {
   const [currentFile, setCurrentFile] = useState<File | null>(null);
   const [uploadStatus, setUploadStatus] = useState<string>('');
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [zoom, setZoom] = useState(1);
+  const [masterVolume, setMasterVolume] = useState(80);
 
   const handleFileUpload = (file: File) => {
     setCurrentFile(file);
@@ -136,18 +144,46 @@ const Index = () => {
         <AudioToolbar 
           onFileUpload={handleFileUpload}
           onExport={handleExport}
+          isPlaying={isPlaying}
+          onPlay={() => setIsPlaying(true)}
+          onPause={() => setIsPlaying(false)}
+          onStop={() => setIsPlaying(false)}
+          masterVolume={masterVolume}
+          onMasterVolumeChange={setMasterVolume}
         />
 
         {/* Main Editor Layout */}
-        <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 xl:grid-cols-5 gap-6">
           {/* Main Waveform Editor */}
           <div className="xl:col-span-3 space-y-6">
-            <WaveformDisplay audioFile={currentFile || undefined} />
+            <WaveformDisplay 
+              audioFile={currentFile || undefined} 
+              zoom={zoom}
+              isPlaying={isPlaying}
+              onPlayPause={() => setIsPlaying(!isPlaying)}
+              onStop={() => setIsPlaying(false)}
+            />
             <AudioTimeline />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <SpectralAnalyzer audioFile={currentFile || undefined} isPlaying={isPlaying} />
+              <AudioMeters isPlaying={isPlaying} />
+            </div>
           </div>
 
-          {/* Effects Panel */}
-          <div className="xl:col-span-1">
+          {/* Right Sidebar */}
+          <div className="xl:col-span-2 space-y-6">
+            <ZoomControls 
+              onZoomChange={setZoom}
+              onZoomIn={() => setZoom(prev => Math.min(8, prev * 1.5))}
+              onZoomOut={() => setZoom(prev => Math.max(0.1, prev / 1.5))}
+              onZoomFit={() => setZoom(1)}
+              onZoomReset={() => setZoom(1)}
+            />
+            <ProjectManager 
+              currentProject={currentFile?.name}
+              onSaveProject={(name) => console.log('Save:', name)}
+              onLoadProject={(project) => console.log('Load:', project)}
+            />
             <EffectsPanel />
           </div>
         </div>
