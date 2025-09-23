@@ -29,9 +29,24 @@ export const AudioToolbar: React.FC<AudioToolbarProps> = ({
 }) => {
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file && file.type.startsWith('audio/')) {
-      onFileUpload(file);
+    if (file) {
+      if (file.type.startsWith('audio/') || file.name.match(/\.(mp3|wav|ogg|m4a|flac|aac)$/i)) {
+        onFileUpload(file);
+        // Show success feedback
+        const successEvent = new CustomEvent('audio-upload-success', { 
+          detail: { fileName: file.name, size: file.size } 
+        });
+        window.dispatchEvent(successEvent);
+      } else {
+        // Show error feedback
+        const errorEvent = new CustomEvent('audio-upload-error', { 
+          detail: { message: 'Please select a valid audio file (MP3, WAV, OGG, M4A, FLAC, AAC)' } 
+        });
+        window.dispatchEvent(errorEvent);
+      }
     }
+    // Clear the input so the same file can be selected again
+    event.target.value = '';
   };
 
   return (

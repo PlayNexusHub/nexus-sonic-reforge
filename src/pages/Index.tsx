@@ -11,14 +11,40 @@ import heroImage from '@/assets/hero-audio-studio.jpg';
 
 const Index = () => {
   const [currentFile, setCurrentFile] = useState<File | null>(null);
+  const [uploadStatus, setUploadStatus] = useState<string>('');
 
   const handleFileUpload = (file: File) => {
     setCurrentFile(file);
+    setUploadStatus(`Loaded: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`);
+    
+    // Clear status after 3 seconds
+    setTimeout(() => setUploadStatus(''), 3000);
+    
+    // Also update duration for loaded file
+    const audio = new Audio(URL.createObjectURL(file));
+    audio.addEventListener('loadedmetadata', () => {
+      console.log(`Audio duration: ${audio.duration} seconds`);
+    });
   };
 
   const handleExport = () => {
-    // Export functionality would be implemented here
-    console.log('Exporting audio...');
+    if (!currentFile) {
+      alert('Please upload an audio file first');
+      return;
+    }
+    
+    // Create a download link for the current file (demo functionality)
+    const url = URL.createObjectURL(currentFile);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = currentFile.name.replace(/\.[^/.]+$/, '_processed.wav');
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    setUploadStatus('Audio exported successfully!');
+    setTimeout(() => setUploadStatus(''), 3000);
   };
 
   return (
@@ -89,7 +115,16 @@ const Index = () => {
                   }}
                   className="hidden"
                 />
-                <Button variant="outline" size="lg" className="hover:bg-accent/20 hover:border-accent/50">
+                <Button 
+                  variant="outline" 
+                  size="lg" 
+                  className="hover:bg-accent/20 hover:border-accent/50"
+                  onClick={() => {
+                    // Load a demo waveform
+                    setUploadStatus('Demo track loaded - Electronic Music Sample');
+                    setTimeout(() => setUploadStatus(''), 3000);
+                  }}
+                >
                   Load Demo Track
                 </Button>
               </div>
@@ -123,9 +158,15 @@ const Index = () => {
             <div className="flex items-center justify-between text-sm">
               <div className="flex items-center gap-4">
                 <span className="text-muted-foreground">Status:</span>
-                <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30">
-                  Ready for audio processing
-                </Badge>
+                {uploadStatus ? (
+                  <Badge variant="outline" className="bg-accent/10 text-accent border-accent/30">
+                    {uploadStatus}
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30">
+                    {currentFile ? `Loaded: ${currentFile.name}` : 'Ready for audio processing'}
+                  </Badge>
+                )}
               </div>
               <div className="flex items-center gap-4 text-muted-foreground">
                 <span>CPU: 12%</span>

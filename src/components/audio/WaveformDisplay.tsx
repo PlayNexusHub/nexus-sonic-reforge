@@ -79,22 +79,54 @@ export const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
 
   const handlePlayPause = () => {
     const audio = audioRef.current;
-    if (!audio) return;
+    if (!audio) {
+      // Demo functionality for when no audio file is loaded
+      setIsPlaying(!isPlaying);
+      if (!isPlaying) {
+        // Simulate playback progress
+        const interval = setInterval(() => {
+          setCurrentTime(prev => {
+            if (prev >= 180) {
+              clearInterval(interval);
+              setIsPlaying(false);
+              return 0;
+            }
+            return prev + 0.1;
+          });
+        }, 100);
+        
+        // Store interval to clear it if user stops
+        (window as any).playbackInterval = interval;
+      } else {
+        clearInterval((window as any).playbackInterval);
+      }
+      return;
+    }
 
     if (isPlaying) {
       audio.pause();
     } else {
-      audio.play();
+      audio.play().catch(err => {
+        console.error('Audio playback failed:', err);
+        setIsPlaying(false);
+      });
     }
     setIsPlaying(!isPlaying);
   };
 
   const handleStop = () => {
     const audio = audioRef.current;
-    if (!audio) return;
-
-    audio.pause();
-    audio.currentTime = 0;
+    
+    // Clear demo playback interval if it exists
+    if ((window as any).playbackInterval) {
+      clearInterval((window as any).playbackInterval);
+    }
+    
+    if (audio) {
+      audio.pause();
+      audio.currentTime = 0;
+    }
+    
     setIsPlaying(false);
     setCurrentTime(0);
   };
