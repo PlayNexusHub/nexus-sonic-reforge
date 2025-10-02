@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { WaveformDisplay } from '@/components/audio/WaveformDisplay';
 import { AudioToolbar } from '@/components/audio/AudioToolbar';
 import { AudioTimeline } from '@/components/audio/AudioTimeline';
@@ -10,8 +10,12 @@ import { ZoomControls } from '@/components/audio/ZoomControls';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Zap, Music, Headphones, Upload } from 'lucide-react';
+import { Zap, Music, Headphones, Upload, Info } from 'lucide-react';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
+import { validateAudioFile, formatFileSize } from '@/utils/audioValidation';
+import { ErrorHandler, ErrorSeverity } from '@/utils/errorHandler';
+import { toast } from 'sonner';
+import { Link } from 'react-router-dom';
 import heroImage from '@/assets/hero-audio-studio.jpg';
 
 const Index = () => {
@@ -21,39 +25,78 @@ const Index = () => {
   const [zoom, setZoom] = useState(1);
   const [masterVolume, setMasterVolume] = useState(80);
 
-  const handleFileUpload = (file: File) => {
+  const handleFileUpload = useCallback((file: File) => {
+    // Validate file
+    const validation = validateAudioFile(file);
+    
+    if (!validation.valid) {
+      ErrorHandler.handle(validation.error || 'Invalid audio file', ErrorSeverity.ERROR);
+      return;
+    }
+
+    // Show warnings if any
+    if (validation.warnings) {
+      validation.warnings.forEach(warning => {
+        ErrorHandler.handle(warning, ErrorSeverity.WARNING);
+      });
+    }
+
     setCurrentFile(file);
-    setUploadStatus(`Loaded: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`);
+    const fileSize = formatFileSize(file.size);
+    setUploadStatus(`Loaded: ${file.name} (${fileSize})`);
     
-    // Clear status after 3 seconds
-    setTimeout(() => setUploadStatus(''), 3000);
+    toast.success('Audio file loaded successfully', {
+      description: `${file.name} - ${fileSize}`
+    });
     
-    // Also update duration for loaded file
+    // Clear status after 5 seconds
+    setTimeout(() => setUploadStatus(''), 5000);
+    
+    // Load audio metadata
     const audio = new Audio(URL.createObjectURL(file));
     audio.addEventListener('loadedmetadata', () => {
-      console.log(`Audio duration: ${audio.duration} seconds`);
+      if (import.meta.env.DEV) {
+        console.info(`Audio metadata: ${audio.duration}s, ${file.type}`);
+      }
     });
-  };
+    
+    audio.addEventListener('error', () => {
+      ErrorHandler.handle('Failed to load audio metadata', ErrorSeverity.WARNING);
+    });
+  }, []);
 
-  const handleExport = () => {
+  const handleExport = useCallback(() => {
     if (!currentFile) {
-      alert('Please upload an audio file first');
+      ErrorHandler.handle('Please upload an audio file first', ErrorSeverity.WARNING);
       return;
     }
     
-    // Create a download link for the current file (demo functionality)
-    const url = URL.createObjectURL(currentFile);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = currentFile.name.replace(/\.[^/.]+$/, '_processed.wav');
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    
-    setUploadStatus('Audio exported successfully!');
-    setTimeout(() => setUploadStatus(''), 3000);
-  };
+    try {
+      // Create a download link for the current file
+      const url = URL.createObjectURL(currentFile);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = currentFile.name.replace(/\.[^/.]+$/, '_processed.wav');
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      
+      // Clean up
+      setTimeout(() => URL.revokeObjectURL(url), 100);
+      
+      toast.success('Audio exported successfully!', {
+        description: `Saved as: ${a.download}`
+      });
+      
+      setUploadStatus('Audio exported successfully!');
+      setTimeout(() => setUploadStatus(''), 5000);
+    } catch (error) {
+      ErrorHandler.handle(
+        error instanceof Error ? error : new Error('Export failed'),
+        ErrorSeverity.ERROR
+      );
+    }
+  }, [currentFile]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
@@ -69,11 +112,19 @@ const Index = () => {
                 <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
                   Sonic Forge 24
                 </h1>
-                <p className="text-xs text-muted-foreground">Professional Audio Editor</p>
+                <p className="text-xs text-muted-foreground">
+                  Professional Audio Editor | <span className="text-primary">PlayNexus</span>
+                </p>
               </div>
             </div>
             
             <div className="flex items-center gap-3">
+              <Button variant="ghost" size="sm" asChild>
+                <Link to="/about">
+                  <Info className="w-4 h-4 mr-1" />
+                  About
+                </Link>
+              </Button>
               <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30">
                 <Music className="w-3 h-3 mr-1" />
                 Ready
@@ -181,8 +232,14 @@ const Index = () => {
             />
             <ProjectManager 
               currentProject={currentFile?.name}
-              onSaveProject={(name) => console.log('Save:', name)}
-              onLoadProject={(project) => console.log('Load:', project)}
+              onSaveProject={(name) => {
+                toast.success('Project saved', { description: String(name) });
+                if (import.meta.env.DEV) console.info('Save project:', name);
+              }}
+              onLoadProject={(project) => {
+                toast.success('Project loaded', { description: String(project) });
+                if (import.meta.env.DEV) console.info('Load project:', project);
+              }}
             />
             <EffectsPanel />
           </div>

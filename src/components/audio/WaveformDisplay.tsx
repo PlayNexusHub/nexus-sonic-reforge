@@ -235,7 +235,9 @@ export const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
         audio.currentTime = selection.start;
       }
       audio.play().catch(err => {
-        console.error('Audio playback failed:', err);
+        if (import.meta.env.DEV) {
+          console.error('Audio playback failed:', err);
+        }
         setIsPlaying(false);
       });
     }
@@ -268,7 +270,9 @@ export const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
   const handleCut = () => {
     if (selection) {
       // In a real implementation, this would cut the audio
-      console.log(`Cutting audio from ${selection.start}s to ${selection.end}s`);
+      if (import.meta.env.DEV) {
+        console.info(`Cutting audio from ${selection.start}s to ${selection.end}s`);
+      }
       setSelection(null);
     }
   };
@@ -276,7 +280,9 @@ export const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
   const handleCopy = () => {
     if (selection) {
       // In a real implementation, this would copy the audio to clipboard
-      console.log(`Copying audio from ${selection.start}s to ${selection.end}s`);
+      if (import.meta.env.DEV) {
+        console.info(`Copying audio from ${selection.start}s to ${selection.end}s`);
+      }
     }
   };
 
